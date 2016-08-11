@@ -122,7 +122,8 @@ function CallMediaPipeline() {
 CallMediaPipeline.prototype.createPipeline = function(callerId, calleeId, ws, callback) {
     var self = this;
     var recordParams = {
-        uri : "file:///tmp/the_file_name_i_want.webm"
+        uri : "file://" +
+            path.join(__dirname, 'static', 'most-recent.pem')
     };
     getKurentoClient(function(error, kurentoClient) {
         if (error) {
