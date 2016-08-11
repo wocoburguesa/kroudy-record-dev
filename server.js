@@ -198,6 +198,7 @@ CallMediaPipeline.prototype.createPipeline = function(callerId, calleeId, ws, ca
                                     return callback(error);
                                 }
 
+                                calleeWebRtcEndpoint.setMaxVideoRecvBandwidth(0);
                                 calleeWebRtcEndpoint.connect(recorderEndpoint, function (error) {
                                     if(error) {
                                         webRtcEndpoint.release();
