@@ -121,6 +121,9 @@ function CallMediaPipeline() {
 
 CallMediaPipeline.prototype.createPipeline = function(callerId, calleeId, ws, callback) {
     var self = this;
+    var recordParams = {
+        uri : "file:///tmp/the_file_name_i_want.webm"
+    };
     getKurentoClient(function(error, kurentoClient) {
         if (error) {
             return callback(error);
@@ -131,65 +134,84 @@ CallMediaPipeline.prototype.createPipeline = function(callerId, calleeId, ws, ca
                 return callback(error);
             }
 
-            pipeline.create('WebRtcEndpoint', function (error, callerWebRtcEndpoint) {
+            pipeline.create("RecorderEndpoint", recordParams, function(error, recorderEndpoint) {
                 if (error) {
-                    pipeline.release();
-                    return callback(error);
+                    console.log("Recorder problem");
+                    return sendError(res, 500, error);
                 }
 
-                if (candidatesQueue[callerId]) {
-                    while(candidatesQueue[callerId].length) {
-                        var candidate = candidatesQueue[callerId].shift();
-                        callerWebRtcEndpoint.addIceCandidate(candidate);
-                    }
-                }
-
-                callerWebRtcEndpoint.on('OnIceCandidate', function(event) {
-                    var candidate = kurento.register.complexTypes.IceCandidate(event.candidate);
-                    userRegistry.getById(callerId).ws.send(JSON.stringify({
-                        id : 'iceCandidate',
-                        candidate : candidate
-                    }));
-                });
-
-                pipeline.create('WebRtcEndpoint', function(error, calleeWebRtcEndpoint) {
+                //recorderEndpoint = recorder; //just use the variable given from the callback.
+                recorderEndpoint.record();
+                //}); //You must put all code usirng the recorder endpoint inside the callback. Otherwise you have a race condition.
+                console.log("Creating WebRtcEndpoint");
+                pipeline.create('WebRtcEndpoint', function (error, callerWebRtcEndpoint) {
                     if (error) {
                         pipeline.release();
                         return callback(error);
                     }
 
-                    if (candidatesQueue[calleeId]) {
-                        while(candidatesQueue[calleeId].length) {
-                            var candidate = candidatesQueue[calleeId].shift();
-                            calleeWebRtcEndpoint.addIceCandidate(candidate);
+                    if (candidatesQueue[callerId]) {
+                        while(candidatesQueue[callerId].length) {
+                            var candidate = candidatesQueue[callerId].shift();
+                            callerWebRtcEndpoint.addIceCandidate(candidate);
                         }
                     }
 
-                    calleeWebRtcEndpoint.on('OnIceCandidate', function(event) {
+                    callerWebRtcEndpoint.on('OnIceCandidate', function(event) {
                         var candidate = kurento.register.complexTypes.IceCandidate(event.candidate);
-                        userRegistry.getById(calleeId).ws.send(JSON.stringify({
+                        userRegistry.getById(callerId).ws.send(JSON.stringify({
                             id : 'iceCandidate',
                             candidate : candidate
                         }));
                     });
 
-                    callerWebRtcEndpoint.connect(calleeWebRtcEndpoint, function(error) {
+                    pipeline.create('WebRtcEndpoint', function(error, calleeWebRtcEndpoint) {
                         if (error) {
                             pipeline.release();
                             return callback(error);
                         }
 
-                        calleeWebRtcEndpoint.connect(callerWebRtcEndpoint, function(error) {
+                        if (candidatesQueue[calleeId]) {
+                            while(candidatesQueue[calleeId].length) {
+                                var candidate = candidatesQueue[calleeId].shift();
+                                calleeWebRtcEndpoint.addIceCandidate(candidate);
+                            }
+                        }
+
+                        calleeWebRtcEndpoint.on('OnIceCandidate', function(event) {
+                            var candidate = kurento.register.complexTypes.IceCandidate(event.candidate);
+                            userRegistry.getById(calleeId).ws.send(JSON.stringify({
+                                id : 'iceCandidate',
+                                candidate : candidate
+                            }));
+                        });
+
+                        callerWebRtcEndpoint.connect(calleeWebRtcEndpoint, function(error) {
                             if (error) {
                                 pipeline.release();
                                 return callback(error);
                             }
-                        });
 
-                        self.pipeline = pipeline;
-                        self.webRtcEndpoint[callerId] = callerWebRtcEndpoint;
-                        self.webRtcEndpoint[calleeId] = calleeWebRtcEndpoint;
-                        callback(null);
+                            calleeWebRtcEndpoint.connect(callerWebRtcEndpoint, function(error) {
+                                if (error) {
+                                    pipeline.release();
+                                    return callback(error);
+                                }
+
+                                calleeWebRtcEndpoint.connect(recorderEndpoint, function (error) {
+                                    if(error) {
+                                        webRtcEndpoint.release();
+                                        return sendError(res, 500, error);
+                                    }
+                                    //recorderEndpoint.record(); //You are alredy invoking recorderEndpoit.record() above.
+                                });
+                            });
+
+                            self.pipeline = pipeline;
+                            self.webRtcEndpoint[callerId] = callerWebRtcEndpoint;
+                            self.webRtcEndpoint[calleeId] = calleeWebRtcEndpoint;
+                            callback(null);
+                        });
                     });
                 });
             });
