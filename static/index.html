@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="cache-control" content="no-cache">
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="shortcut icon" href="img/kurento.png" type="image/png"/>
+
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="bower_components/demo-console/index.css">
+    <link rel="stylesheet" href="bower_components/ekko-lightbox/dist/ekko-lightbox.min.css">
+    <link rel="stylesheet" href="css/kurento.css">
+
+    <script src="bower_components/adapter.js/adapter.js"></script>
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+<!--    <script src="bower_components/demo-console/index.js"></script> -->
+    <script src="bower_components/draggabilly/dist/draggabilly.pkgd.min.js"></script>
+    <script src="bower_components/ekko-lightbox/dist/ekko-lightbox.min.js"></script>
+
+    <script src="bower_components/kurento-utils/js/kurento-utils.js"></script>
+
+    <script src="js/index.js"></script>
+    <title>Probando grabacion de llamada por WebRTC</title>
+  </head>
+  <body>
+
+    <header>
+      <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+          <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"></button>
+            <a class="navbar-brand" href=".">Kroudy Labs</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="page-header">
+        <h1>Llamar y grabar video en servidor</h1>
+        <p>
+	  Llamar a un usuario usando su nombre registrado. Terminar la llamada haciendo clic en "Detener". Descargar video haciendo clic en "Descargar".
+        </p>
+      </div>
+      <div class="row">
+        <div class="col-md-5">
+          <label class="control-label" for="name">Nombre</label>
+          <div class="row">
+            <div class="col-md-6">
+              <input id="name" name="name" class="form-control" type="text"/>
+            </div>
+            <div class="col-md-6 text-right">
+              <a id="register" href="#" class="btn btn-primary">
+                <span class="glyphicon glyphicon-plus"></span> Registrar</a>
+            </div>
+          </div>
+          <br/>
+          <br/>
+          <label class="control-label" for="peer">Llamar a</label>
+          <div class="row">
+            <div class="col-md-6">
+              <input id="peer" name="peer" class="form-control" type="text">
+            </div>
+            <div class="col-md-6 text-right">
+              <a id="call" href="#" class="btn btn-success">
+                <span class="glyphicon glyphicon-play"></span> Llamar</a>
+              <a id="terminate" href="#" class="btn btn-danger">
+                <span class="glyphicon glyphicon-stop"></span> Detener</a>
+            </div>
+          </div>
+          <br/>
+
+	  <div id="video-name">
+	    <input type="text"/>
+	    <a class="btn btn-success" target="_blank">Guardar</a>
+	    <a class="btn btn-danger" target="_blank">Descartar</a>
+	  </div>
+
+	  <div id="video-link">
+	    <a class="btn btn-primary" target="_blank">Ver video</a>
+	  </div>
+
+          <label class="control-label">Usuarios registrados</label><br>
+	  <div id="users-list" class="users-list list-group"></div>
+
+          <label class="control-label">Archivo de videos</label><br>
+	  <div id="video-list" class="video-list list-group"></div>
+	  <!--
+          <div id="console" class="democonsole">
+            <ul></ul>
+          </div>
+	  -->
+        </div>
+        <div class="col-md-7">
+          <div id="videoBig">
+            <video id="videoOutput" autoplay width="640px" height="480px" poster="img/webrtc.png"></video>
+          </div>
+          <div id="videoSmall">
+            <video id="videoInput" autoplay width="240px" height="180px" poster="img/webrtc.png"></video>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="foot-fixed-bottom">
+        <div class="container text-center">
+          <hr/>
+          <div class="row">&copy; 2016 Kroudy</div>
+        </div>
+      </div>
+    </footer>
+
+  </body>
+</html>

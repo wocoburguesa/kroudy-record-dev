@@ -23,6 +23,7 @@ var url = require('url');
 var kurento = require('kurento-client');
 var fs    = require('fs');
 var https = require('https');
+var mv = require('mv');
 
 require('ssl-root-cas')
   .inject()
@@ -123,7 +124,7 @@ CallMediaPipeline.prototype.createPipeline = function(callerId, calleeId, ws, ca
     var self = this;
     var recordParams = {
         uri : "file://" +
-            path.join(__dirname, 'static', 'most-recent.pem')
+            path.join(__dirname, 'static/video', 'most-recent.webm')
     };
     getKurentoClient(function(error, kurentoClient) {
         if (error) {
@@ -141,9 +142,7 @@ CallMediaPipeline.prototype.createPipeline = function(callerId, calleeId, ws, ca
                     return sendError(res, 500, error);
                 }
 
-                //recorderEndpoint = recorder; //just use the variable given from the callback.
                 recorderEndpoint.record();
-                //}); //You must put all code usirng the recorder endpoint inside the callback. Otherwise you have a race condition.
                 console.log("Creating WebRtcEndpoint");
                 pipeline.create('WebRtcEndpoint', function (error, callerWebRtcEndpoint) {
                     if (error) {
@@ -292,6 +291,10 @@ wss.on('connection', function(ws) {
             onIceCandidate(sessionId, message.candidate);
             break;
 
+        case 'saveVideo':
+            saveVideo(message.name, message.user, message.peer);
+            break;
+
         default:
             ws.send(JSON.stringify({
                 id : 'error',
@@ -302,6 +305,31 @@ wss.on('connection', function(ws) {
 
     });
 });
+
+function saveVideo(name, user, peer) {
+    var currDate = new Date();
+    var videoName = name || currDate.toISOString();
+    var videoReadyMsg;
+    var stopperUser = userRegistry.getByName(user);
+    var stoppedUser = userRegistry.getByName(peer);
+    mv(path.join(__dirname, 'static/video', 'most-recent.webm'),
+       path.join(__dirname, 'static/video', videoName + '.webm'),
+       function (error) {
+	   if (error) {
+	       console.log('Could not rename most recent video file.');
+	       return;
+	   } else {
+	       videoReadyMsg = {
+		   id: 'videoReady',
+		   message: 'video file is ready',
+		   name: videoName + '.webm'
+	       };
+
+	       stopperUser.sendMessage(videoReadyMsg);
+	       stoppedUser.sendMessage(videoReadyMsg);
+	   }
+       });
+}
 
 // Recover kurentoClient for the first time.
 function getKurentoClient(callback) {
@@ -447,9 +475,12 @@ function call(callerId, to, from, sdpOffer) {
 }
 
 function register(id, name, ws, callback) {
+    var videos, videosFolder;
     function onError(error) {
         ws.send(JSON.stringify({id:'registerResponse', response : 'rejected ', message: error}));
     }
+
+    
 
     if (!name) {
         return onError("empty user name");
@@ -460,10 +491,32 @@ function register(id, name, ws, callback) {
     }
 
     userRegistry.register(new UserSession(id, name, ws));
+    sendUpdatedUsersList();
+
+    videosFolder = path.join(__dirname, 'static/video/');
+    videos = fs.readdirSync(videosFolder);
+    videos.sort(function(a, b) {
+        return fs.statSync(videosFolder + b).mtime.getTime() - 
+            fs.statSync(videosFolder + a).mtime.getTime();
+    });
     try {
-        ws.send(JSON.stringify({id: 'registerResponse', response: 'accepted'}));
+        ws.send(JSON.stringify({
+	    id: 'registerResponse',
+	    response: 'accepted',
+	    videos: videos
+	}));
     } catch(exception) {
         onError(exception);
+    }
+}
+
+function sendUpdatedUsersList() {
+    var userNames = [];
+    for (key in userRegistry.usersById) {
+	userNames.push(userRegistry.usersById[key].name);
+    }
+    for (key in userRegistry.usersById) {
+	userRegistry.usersById[key].ws.send(JSON.stringify({id:'newUser', users: userNames}));
     }
 }
 
